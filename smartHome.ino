@@ -191,7 +191,7 @@ void mqttData(void* response) {
          
          Serial.println("1"+topicwords+"1");
          if(topicwords=="config"){
-           int id = getValue(topic, '/', 3).toInt();
+           int id = getValue(topicwords, '|', 2).toInt();
            if (getValue(topicwords, '|', 2) == 'delete') {
              bme280_arr[id].bme280_obj = NULL;
              bme280_arr[id].is_null = true;
