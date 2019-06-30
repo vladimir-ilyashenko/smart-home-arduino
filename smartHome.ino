@@ -20,8 +20,20 @@ struct bme280_struct {
   bool ok = false;
   bool is_null = true;
 };
-bme280_struct bme280_arr[2];
+bme280_struct bme280_arr[bme280_arr_size];
 ///////////////////////////////////////////////////////////////////////////////////////BME280
+
+//////////////// Lamps
+const int lamp_arr_size = 10;
+
+struct lamp_struct {
+  int pin = -1;
+  bool on = false;
+  String id = "";
+};
+
+lamp_struct lamp_arr[lamp_arr_size];
+//////////////// Lamps
 
 /**
    Simple example to demo the esp-link MQTT client
@@ -118,40 +130,73 @@ void mqttData(void* response) {
       if(topicwords == "lamps"){
          Serial.println("lamps");Serial.println(topicwords);
          topicwords = getValue(topic, '/', 4);//command config schedules
-         
+
          Serial.println("1"+topicwords+"1");
+         String id = getValue(topic, '/', 3);
          if(topicwords=="config"){
-                  Serial.println("config");Serial.println(topicwords);
-                  //create oblect
-                    pinMode(5, OUTPUT);
-                   digitalWrite(5,LOW);
-         }
+           Serial.println("config");Serial.println(topicwords);
+           if (getValue(data, '|', 2) == "delete") {
+             for (int i = 0; i < lamp_arr_size; i++) {
+               if (lamp_arr[i].id == id) {
+                 Serial.print("Deleting lamp with id=");
+                 Serial.print(lamp_arr[i].id);
+                 Serial.print(", pin=");
+                 Serial.println(lamp_arr[i].pin);
+                 lamp_arr[i].pin = -1;
+                 lamp_arr[i].on = false;
+                 lamp_arr[i].id = "";
+               }
+             } // for
+           } else {
+             int pin = getValue(data, '|', 2).toInt();
+             bool is_update = false;
+             for (int i = 0; i < lamp_arr_size; i++) {
+               if (lamp_arr[i].id == id) {
+                 Serial.print("Received update for lamp with id=");
+                 Serial.print(lamp_arr[i].id);
+                 Serial.print(", pin=");
+                 Serial.print(lamp_arr[i].pin);
+                 Serial.print(", new pin=");
+                 Serial.println(pin);
+                 lamp_arr[i].pin = pin;
+                 is_update = true;
+                 break;
+               }
+             }
+             if(!is_update){
+               for (int i = 0; i < lamp_arr_size; i++) {
+                 if (lamp_arr[i].pin == -1) {
+                   lamp_arr[i].pin = pin;
+                   lamp_arr[i].id = id;
+                   Serial.print("Created lamp with id=");
+                   Serial.print(lamp_arr[i].id);
+                   Serial.print(", pin=");
+                   Serial.println(lamp_arr[i].pin);
+                   break;
+                 }
+               }
+             }
+           } // if delete else update,create
+         } // if config
          else if(topicwords =="command"){          
-                 Serial.println("command");Serial.println(topicwords);
+           Serial.println("command");Serial.println(topicwords);
 
-                 Serial.println("data");Serial.println(data);
-                 topicwords = getValue(data, '|', 0);//
-                 Serial.println("name");Serial.println(topicwords);
-
-                if(topicwords =="on")
-                {
-                        digitalWrite(5,HIGH);
-                }
-                else if(topicwords == "off")
-                {
-                     digitalWrite(5,LOW);
-                }
-                 Serial.println("data");Serial.println(data);
-                 topicwords = getValue(data, '|', 1);//
-                 Serial.println("pin");Serial.println(topicwords);
-               
-                 digitalWrite(5,HIGH);                 
+           Serial.println(data);
+           for (int i = 0; i < lamp_arr_size; i++) {
+             if (lamp_arr[i].id == id) {
+               if(data =="on") {
+                 digitalWrite(lamp_arr[i].pin,HIGH);
+                 lamp_arr[i].on = false;
+               }
+               else if(data == "off") {
+                 digitalWrite(lamp_arr[i].pin,LOW);
+                 lamp_arr[i].on = true;
+               }
+             }
+           }
          }
          else if(topicwords =="schedules"){
                  Serial.println("schedules");Serial.println(topicwords);
-                 digitalWrite(5,LOW);
-                 delay(1000);
-                 digitalWrite(5,HIGH);
          }         
       }/////////////////////////////////////////////////////////////////////////////////////////////////////////////////lamp
             else  if(topicwords == "motionsensors"){
