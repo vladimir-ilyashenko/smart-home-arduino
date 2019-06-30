@@ -15,25 +15,13 @@ const int bme280_arr_size = 2;
 
 struct bme280_struct {
   uint8_t addr = 0x00;
-  int id;
+  String id = "";
   Adafruit_BME280 bme280_obj;
-  bool ok;
-  bool is_null;
+  bool ok = false;
+  bool is_null = true;
 };
 bme280_struct bme280_arr[2];
 ///////////////////////////////////////////////////////////////////////////////////////BME280
-
-
-
-
-
-
-
-
-
-
-
-
 
 /**
    Simple example to demo the esp-link MQTT client
@@ -191,19 +179,50 @@ void mqttData(void* response) {
          
          Serial.println("1"+topicwords+"1");
          if(topicwords=="config"){
-           int id = getValue(topicwords, '|', 2).toInt();
-           if (getValue(topicwords, '|', 2) == 'delete') {
-             bme280_arr[id].bme280_obj = NULL;
-             bme280_arr[id].is_null = true;
-             bme280_arr[id].ok = false;
+           String id = getValue(topic, '/', 3);
+           if (getValue(data, '|', 2) == "delete") {
+             for (int i = 0; i < bme280_arr_size; i++) {
+               if (bme280_arr[i].id == id) {
+                 bme280_arr[i].bme280_obj = NULL;
+                 bme280_arr[i].is_null = true;
+                 bme280_arr[i].ok = false;
+                 bme280_arr[i].id = "";
+                 Serial.print("Deleted BME280 Sensor with id=");
+                 Serial.print(bme280_arr[i].id);
+                 Serial.print(", addr=");
+                 Serial.println(bme280_arr[i].addr);
+               }
+             }
            } else {
-             Adafruit_BME280 bme;
-             
-             bme280_arr[id].addr = 0x76 + id;
-             bme280_arr[id].id = id;
-             bme280_arr[id].bme280_obj = bme;
-             bme280_arr[id].ok = false;
-             bme280_arr[id].is_null = false;
+             bool is_update = false;
+             for (int i = 0; i < bme280_arr_size; i++) {
+               if (bme280_arr[i].id == id) {
+                 Serial.print("Received update for BME280 Sensor with id=");
+                 Serial.print(bme280_arr[i].id);
+                 Serial.print(", addr=");
+                 Serial.println(bme280_arr[i].addr);
+                 is_update = true;
+                 break;
+               }
+             }
+             if(!is_update){
+               for (int i = 0; i < bme280_arr_size; i++) {
+                 if (bme280_arr[i].is_null == true) {
+                   Adafruit_BME280 bme;
+                   
+                   bme280_arr[i].addr = 0x76+i;
+                   bme280_arr[i].id = id;
+                   bme280_arr[i].bme280_obj = bme;
+                   bme280_arr[i].ok = false;
+                   bme280_arr[i].is_null = false;
+                   Serial.print("Created BME280 Sensor with id=");
+                   Serial.print(bme280_arr[i].id);
+                   Serial.print(", addr=");
+                   Serial.println(bme280_arr[i].addr);
+                   break;
+                 }
+               }
+             }
            }
          }
          else if(topicwords =="data"){

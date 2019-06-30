@@ -17,21 +17,58 @@ void sendBmeData() {
     } 
     if (bme280_arr[i].ok) {
       bme280_arr[i].bme280_obj.takeForcedMeasurement();
-      String message = (String)bme280_arr[i].bme280_obj.readTemperature() + "|" + (String)bme280_arr[i].bme280_obj.readPressure() + "|" + (String)bme280_arr[i].bme280_obj.readHumidity() + '|' + (String)bme280_arr[i].bme280_obj.readAltitude(SEALEVELPRESSURE_HPA);
-      String topic = "/devices/temperatures/" + (String) bme280_arr[i].id + "/data";
-      mqtt.publish(topic.c_str(), message.c_str());
+      char buf[12];
+      
+      itoa(bme280_arr[i].bme280_obj.readTemperature(), buf, 10);
+      String topic = "/devices/temperatures/" + bme280_arr[i].id + "/data/temperature";
+      mqtt.publish(topic.c_str(), buf);
+      
+      itoa((bme280_arr[i].bme280_obj.readPressure() / 100.0F), buf, 10);
+      topic = "/devices/temperatures/" + bme280_arr[i].id + "/data/pressure";
+      mqtt.publish(topic.c_str(), buf);
+
+      itoa(bme280_arr[i].bme280_obj.readAltitude(SEALEVELPRESSURE_HPA), buf, 10);
+      topic = "/devices/temperatures/" + bme280_arr[i].id + "/data/altitude";
+      mqtt.publish(topic.c_str(), buf);
+
+      itoa(bme280_arr[i].bme280_obj.readHumidity(), buf, 10);
+      topic = "/devices/temperatures/" + bme280_arr[i].id + "/data/humidity";
+      mqtt.publish(topic.c_str(), buf);
+      
+      
+    } else {
+      Serial.print("BME280 Sensor with id=");
+      Serial.print(bme280_arr[i].id);
+      Serial.print(", addr=");
+      Serial.print(bme280_arr[i].addr);
+      Serial.println(" is not ok, skipping");
     }
   }
   if (bme280_reset_counter <= 0) {
     for(int i = 0; i < bme280_arr_size; i++) {
       if (bme280_arr[i].is_null) {
         continue;
-      }      
+      }
+      Serial.print("Resetting BME280 Sensor with id=");
+      Serial.print(bme280_arr[i].id);
+      Serial.print(", addr=");
+      Serial.println(bme280_arr[i].addr);
       bme280_arr[i].ok = bme280_arr[i].bme280_obj.begin(bme280_arr[i].addr);
       if (!bme280_arr[i].ok){
-        String topic = "/devices/temperatures/" + (String) bme280_arr[i].id + "/data";
+        Serial.println("BME sensor was not ok");
+        String topic = "/devices/temperatures/" + bme280_arr[i].id + "/data/temperature";        
+        mqtt.publish(topic.c_str(), "0");
         
-        mqtt.publish(topic.c_str(), "no data|no data|no data|do data");
+          topic = "/devices/temperatures/" + bme280_arr[i].id + "/data/pressure";        
+        mqtt.publish(topic.c_str(), "0");
+          topic = "/devices/temperatures/" + bme280_arr[i].id + "/data/altitude";        
+        mqtt.publish(topic.c_str(), "0");
+          topic = "/devices/temperatures/" + bme280_arr[i].id + "/data/humidity";        
+        mqtt.publish(topic.c_str(), "0");
+
+        
+      } else {
+        Serial.println("BME sensor was ok");
       }
     }
     bme280_reset_counter = 10;
